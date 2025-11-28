@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte des Stations de Ski - Ski Map</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .map-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 20px 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(102, 126, 234, 0.1);
+        }
+        
+        .map-header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .map-header h1 {
+            font-size: 1.8em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+        }
+        
+        .map-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .back-button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .search-box {
+            padding: 10px 20px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            border-radius: 12px;
+            font-size: 0.95em;
+            width: 250px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .search-box:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+        
+        .sort-select {
+            padding: 10px 20px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            border-radius: 12px;
+            font-size: 0.95em;
+            background: white;
+            color: #1a1a1a;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s ease;
+            min-width: 200px;
+            font-weight: 500;
+        }
+        
+        .sort-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+        
+        #map {
+            width: 100vw;
+            height: 100vh;
+            margin-top: 80px;
+        }
+        
+        .custom-marker {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 30px;
+            height: 30px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .custom-marker::after {
+            content: '❄️';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+            font-size: 14px;
+        }
+        
+        .custom-marker.high-snow {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .custom-marker.medium-snow {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .custom-marker.low-snow {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .custom-marker.no-snow {
+            background: linear-gradient(135deg, #d3d3d3 0%, #a0a0a0 100%);
+        }
+        
+        .custom-popup {
+            min-width: 220px;
+        }
+        
+        .popup-station-name {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        
+        .popup-station-location {
+            color: #64748b;
+            font-size: 0.9em;
+            margin-bottom: 12px;
+        }
+        
+        .popup-station-snow {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .popup-station-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 0.85em;
+        }
+        
+        .popup-info-item {
+            background: rgba(102, 126, 234, 0.05);
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+        
+        .popup-info-label {
+            color: #64748b;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .popup-info-value {
+            color: #1a1a1a;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        
+        .popup-button {
+            margin-top: 12px;
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .popup-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 8px 15px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 10px;
+        }
+        
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 0.75em;
+            color: #64748b;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .map-header {
+                padding: 15px;
+            }
+            
+            .map-header h1 {
+                font-size: 1.4em;
+            }
+            
+            .map-controls {
+                width: 100%;
+            }
+            
+            .search-box, .sort-select {
+                width: 100%;
+            }
+            
+            #map {
+                margin-top: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="map-header">
+        <div class="map-header-content">
+            <h1>🗺️ Carte des Stations de Ski</h1>
+            <div class="map-controls">
+                <a href="all-stations.html" class="back-button">← Retour à la liste</a>
+                <input type="text" class="search-box" id="searchInput" placeholder="🔍 Rechercher...">
+                <select class="sort-select" id="sortSelect" onchange="applySort()">
+                    <optgroup label="Chutes passées">
+                        <option value="24h">Dernières 24h</option>
+                        <option value="2j">2 derniers jours</option>
+                        <option value="3j">3 derniers jours</option>
+                        <option value="4j">4 derniers jours</option>
+                        <option value="5j">5 derniers jours</option>
+                        <option value="6j">6 derniers jours</option>
+                        <option value="7j">7 derniers jours</option>
+                    </optgroup>
+                    <optgroup label="Prévisions futures">
+                        <option value="f3j">Dans 3 jours</option>
+                        <option value="f4j">Dans 4 jours</option>
+                        <option value="f5j">Dans 5 jours</option>
+                        <option value="f6j">Dans 6 jours</option>
+                    </optgroup>
+                </select>
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalStations">0</div>
+                        <div class="stat-label">Stations</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="avgSnow">0</div>
+                        <div class="stat-label">cm (moy)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <script>
+        // Charger les données des stations depuis all-stations.html
+        // Pour simplifier, on va recréer les données ici
+        const locations = [
+            "Alpes du Nord, France", "Alpes du Sud, France", "Pyrénées, France",
+            "Valais, Suisse", "Grisons, Suisse", "Berne, Suisse", "Vaud, Suisse",
+            "Tyrol, Autriche", "Salzbourg, Autriche", "Vorarlberg, Autriche", "Styrie, Autriche",
+            "Piémont, Italie", "Vallée d'Aoste, Italie", "Trentin, Italie", "Lombardie, Italie",
+            "Bavière, Allemagne", "Bade-Wurtemberg, Allemagne",
+            "Andorre", "Catalogne, Espagne", "Aragon, Espagne",
+            "Colorado, États-Unis", "Utah, États-Unis", "Californie, États-Unis",
+            "Wyoming, États-Unis", "Montana, États-Unis", "Vermont, États-Unis",
+            "Colombie-Britannique, Canada", "Alberta, Canada", "Québec, Canada", "Ontario, Canada"
+        ];
+        
+        // Fonction pour déterminer la localisation correcte d'une station
+        function getStationLocation(name) {
+            const nameLower = name.toLowerCase();
+            
+            // Stations françaises
+            if (nameLower.includes('tignes') || nameLower.includes('val d\'isère') || nameLower.includes('val thorens') || 
+                nameLower.includes('les menuires') || nameLower.includes('méribel') || nameLower.includes('courchevel') ||
+                nameLower.includes('les arcs') || nameLower.includes('la plagne') || nameLower.includes('la rosière') ||
+                nameLower.includes('sainte-foy') || nameLower.includes('les saisies') || nameLower.includes('peisey') ||
+                nameLower.includes('la tania') || nameLower.includes('brides') || nameLower.includes('saint-martin') ||
+                nameLower.includes('les belleville') || nameLower.includes('orelle') || nameLower.includes('valmorel') ||
+                nameLower.includes('doucy') || nameLower.includes('notre-dame') || nameLower.includes('praz-sur-arly') ||
+                nameLower.includes('combloux') || nameLower.includes('saint-gervais') || nameLower.includes('les contamines') ||
+                nameLower.includes('cordon') || nameLower.includes('passy') || nameLower.includes('sallanches') ||
+                nameLower.includes('domancy') || nameLower.includes('megève') || nameLower.includes('la clusaz') ||
+                nameLower.includes('grand-bornand') || nameLower.includes('manigod') || nameLower.includes('thônes') ||
+                nameLower.includes('saint-jean') || nameLower.includes('flumet') || nameLower.includes('les gets') ||
+                nameLower.includes('morzine') || nameLower.includes('avoriaz') || nameLower.includes('châtel') ||
+                nameLower.includes('abondance') || nameLower.includes('chapelle') || nameLower.includes('torgon') ||
+                nameLower.includes('crosets') || nameLower.includes('champéry') || nameLower.includes('champoussin') ||
+                nameLower.includes('morgins') || nameLower.includes('val-d\'illiez') || nameLower.includes('isola 2000') ||
+                nameLower.includes('auron') || nameLower.includes('valberg') || nameLower.includes('beuil') ||
+                nameLower.includes('risoul') || nameLower.includes('vars') || nameLower.includes('serre chevalier') ||
+                nameLower.includes('montgenèvre') || nameLower.includes('briançon') || nameLower.includes('font-romeu') ||
+                nameLower.includes('les angles') || nameLower.includes('formiguères') || nameLower.includes('la mongie') ||
+                nameLower.includes('barèges')) {
+                return "Alpes du Nord, France";
+            }
+            
+            // Stations suisses
+            if (nameLower.includes('les diablerets') || nameLower.includes('villars') || nameLower.includes('leysin') ||
+                nameLower.includes('gryon') || nameLower.includes('anzère') || nameLower.includes('crans-montana') ||
+                nameLower.includes('verbier') || nameLower.includes('nendaz') || nameLower.includes('veysonnaz') ||
+                nameLower.includes('thyon') || nameLower.includes('zermatt') || nameLower.includes('saas-fee') ||
+                nameLower.includes('grimentz') || nameLower.includes('arolla') || nameLower.includes('evolène') ||
+                nameLower.includes('adelboden') || nameLower.includes('aletsch') || nameLower.includes('andermatt') ||
+                nameLower.includes('arosa') || nameLower.includes('bettmeralp') || nameLower.includes('davos') ||
+                nameLower.includes('engelberg') || nameLower.includes('gstaad') || nameLower.includes('grindelwald') ||
+                nameLower.includes('st. moritz') || nameLower.includes('saint-moritz')) {
+                if (nameLower.includes('zermatt') || nameLower.includes('saas-fee') || nameLower.includes('grimentz') ||
+                    nameLower.includes('arolla') || nameLower.includes('evolène') || nameLower.includes('anzère') ||
+                    nameLower.includes('crans-montana') || nameLower.includes('verbier') || nameLower.includes('nendaz') ||
+                    nameLower.includes('veysonnaz') || nameLower.includes('thyon')) {
+                    return "Valais, Suisse";
+                }
+                if (nameLower.includes('st. moritz') || nameLower.includes('saint-moritz') || nameLower.includes('davos') ||
+                    nameLower.includes('arosa') || nameLower.includes('adelboden')) {
+                    return "Grisons, Suisse";
+                }
+                if (nameLower.includes('gstaad') || nameLower.includes('grindelwald') || nameLower.includes('engelberg')) {
+                    return "Berne, Suisse";
+                }
+                return "Vaud, Suisse";
+            }
+            
+            // Stations autrichiennes
+            if (nameLower.includes('kitzbühel') || nameLower.includes('st. anton') || nameLower.includes('ischgl') ||
+                nameLower.includes('sölden') || nameLower.includes('mayrhofen') || nameLower.includes('lech') ||
+                nameLower.includes('zürs') || nameLower.includes('warth') || nameLower.includes('obergurgl') ||
+                nameLower.includes('hintertux') || nameLower.includes('fieberbrunn') || nameLower.includes('saalbach') ||
+                nameLower.includes('hinterglemm') || nameLower.includes('zell am see') || nameLower.includes('kaprun') ||
+                nameLower.includes('bad gastein') || nameLower.includes('schladming') || nameLower.includes('dachstein') ||
+                nameLower.includes('haus im ennstal') || nameLower.includes('filzmoos')) {
+                if (nameLower.includes('lech') || nameLower.includes('zürs') || nameLower.includes('warth') ||
+                    nameLower.includes('st. anton') || nameLower.includes('ischgl')) {
+                    return "Vorarlberg, Autriche";
+                }
+                if (nameLower.includes('kitzbühel') || nameLower.includes('sölden') || nameLower.includes('mayrhofen') ||
+                    nameLower.includes('obergurgl') || nameLower.includes('hintertux') || nameLower.includes('fieberbrunn')) {
+                    return "Tyrol, Autriche";
+                }
+                if (nameLower.includes('saalbach') || nameLower.includes('hinterglemm') || nameLower.includes('zell am see') ||
+                    nameLower.includes('kaprun') || nameLower.includes('bad gastein')) {
+                    return "Salzbourg, Autriche";
+                }
+                if (nameLower.includes('schladming') || nameLower.includes('dachstein') || nameLower.includes('haus im ennstal') ||
+                    nameLower.includes('filzmoos')) {
+                    return "Styrie, Autriche";
+                }
+                return "Tyrol, Autriche";
+            }
+            
+            // Stations italiennes
+            if (nameLower.includes('alagna') || nameLower.includes('alta badia') || nameLower.includes('bormio') ||
+                nameLower.includes('cervinia') || nameLower.includes('cortina') || nameLower.includes('livigno') ||
+                nameLower.includes('sestrière') || nameLower.includes('sestriere') || nameLower.includes('sauze d\'oulx') ||
+                nameLower.includes('bardonecchia') || nameLower.includes('claviere') || nameLower.includes('cesana')) {
+                if (nameLower.includes('cortina') || nameLower.includes('alta badia')) {
+                    return "Trentin, Italie";
+                }
+                if (nameLower.includes('bormio') || nameLower.includes('livigno')) {
+                    return "Lombardie, Italie";
+                }
+                if (nameLower.includes('sestrière') || nameLower.includes('sestriere') || nameLower.includes('sauze') ||
+                    nameLower.includes('bardonecchia') || nameLower.includes('claviere') || nameLower.includes('cesana')) {
+                    return "Piémont, Italie";
+                }
+                return "Vallée d'Aoste, Italie";
+            }
+            
+            // Stations allemandes
+            if (nameLower.includes('garmisch') || nameLower.includes('oberstdorf')) {
+                return "Bavière, Allemagne";
+            }
+            
+            // Stations espagnoles/andorranes
+            if (nameLower.includes('grandvalira') || nameLower.includes('vallnord') || nameLower.includes('soldeu')) {
+                return "Andorre";
+            }
+            if (nameLower.includes('baqueira-beret') || nameLower.includes('formigal')) {
+                return "Catalogne, Espagne";
+            }
+            
+            // Stations américaines
+            if (nameLower.includes('aspen') || nameLower.includes('vail') || nameLower.includes('breckenridge')) {
+                return "Colorado, États-Unis";
+            }
+            if (nameLower.includes('park city') || nameLower.includes('deer valley')) {
+                return "Utah, États-Unis";
+            }
+            if (nameLower.includes('mammoth') || nameLower.includes('squaw valley')) {
+                return "Californie, États-Unis";
+            }
+            if (nameLower.includes('jackson hole') || nameLower.includes('big sky')) {
+                return "Wyoming, États-Unis";
+            }
+            if (nameLower.includes('stowe') || nameLower.includes('killington')) {
+                return "Vermont, États-Unis";
+            }
+            
+            // Stations canadiennes
+            if (nameLower.includes('whistler')) {
+                return "Colombie-Britannique, Canada";
+            }
+            if (nameLower.includes('banff') || nameLower.includes('lake louise')) {
+                return "Alberta, Canada";
+            }
+            if (nameLower.includes('mont tremblant')) {
+                return "Québec, Canada";
+            }
+            
+            // Par défaut, utiliser la localisation aléatoire
+            return null;
+        }
+        
+        // Fonction pour créer une station avec toutes les données
+        function createStation(name, locationIndex) {
+            // Essayer de déterminer la localisation correcte
+            const correctLocation = getStationLocation(name);
+            const location = correctLocation || (locations[locationIndex] || locations[Math.floor(Math.random() * locations.length)]);
+            const snow24h = Math.floor(Math.random() * 50);
+            const snowBottom = Math.floor(Math.random() * 100);
+            const snowTop = snowBottom + Math.floor(Math.random() * 100) + 50;
+            const pistesPercent = Math.floor(Math.random() * 60) + 10;
+            const status = Math.random() > 0.1 ? "Ouverte" : "Fermée";
+            
+            const snow2j = snow24h + Math.floor(Math.random() * 30);
+            const snow3j = snow2j + Math.floor(Math.random() * 40);
+            const snow4j = snow3j + Math.floor(Math.random() * 30);
+            const snow5j = snow4j + Math.floor(Math.random() * 25);
+            const snow6j = snow5j + Math.floor(Math.random() * 20);
+            const snow7j = snow6j + Math.floor(Math.random() * 15);
+            const forecast3j = Math.floor(Math.random() * 40);
+            const forecast4j = Math.floor(Math.random() * 35);
+            const forecast5j = Math.floor(Math.random() * 30);
+            const forecast6j = Math.floor(Math.random() * 25);
+            
+            return {
+                name: name,
+                location: location,
+                snow24h: snow24h,
+                snow2j: snow2j,
+                snow3j: snow3j,
+                snow4j: snow4j,
+                snow5j: snow5j,
+                snow6j: snow6j,
+                snow7j: snow7j,
+                forecast3j: forecast3j,
+                forecast4j: forecast4j,
+                forecast5j: forecast5j,
+                forecast6j: forecast6j,
+                snowBottom: snowBottom,
+                snowTop: snowTop,
+                pistes: `${pistesPercent}%`,
+                status: status
+            };
+        }
+        
+        // Liste de vraies stations (même que dans all-stations.html)
+        const realStations = [
+            // France - Alpes du Nord avec variantes
+            "La Rosière", "Sainte-Foy-Tarentaise", "Les Saisies", "La Plagne", "Les Arcs",
+            "Les Arcs 1600", "Les Arcs 1800", "Les Arcs 1950", "Les Arcs 2000", "Peisey-Vallandry",
+            "Tignes", "Tignes le Lac", "Val Claret", "Tignes 1800", "Tignes les Brévières",
+            "Val d'Isère", "Val Thorens", "Les Menuires", "Méribel", "Méribel-Mottaret",
+            "Courchevel", "Courchevel 1300", "Courchevel 1550", "Courchevel 1650", "Courchevel 1850",
+            "La Tania", "Brides-les-Bains", "Saint-Martin-de-Belleville", "Les Belleville", "Orelle",
+            "Valmorel", "Doucy", "Notre-Dame-de-Bellecombe", "Praz-sur-Arly", "Combloux",
+            "Saint-Gervais", "Les Contamines", "Cordon", "Passy", "Sallanches",
+            "Domancy", "Megève", "La Clusaz", "Le Grand-Bornand", "Manigod",
+            "Thônes", "Saint-Jean-de-Sixt", "Flumet", "Les Gets", "Morzine",
+            "Avoriaz", "Châtel", "Abondance", "La Chapelle-d'Abondance", "Torgon",
+            "Les Crosets", "Champéry", "Champoussin", "Morgins", "Val-d'Illiez",
+            "Les Diablerets", "Villars", "Villars-sur-Ollon", "Leysin", "Gryon",
+            "Anzère", "Crans-Montana", "Verbier", "Nendaz", "Veysonnaz",
+            "Thyon", "Zermatt", "Saas-Fee", "Grimentz", "Arolla",
+            "Evolène", "Hérémence", "La Forclaz", "Les Marécottes", "Champex-Lac",
+            "Les Mosses", "Leysin", "Villars", "Bex", "Yvorne",
+            "Leysin", "Les Diablerets", "Gryon", "Anzère", "Crans-Montana",
+            
+            // France - Alpes du Sud
+            "Isola 2000", "Auron", "Valberg", "Beuil", "Rouaine",
+            "La Colmiane", "Valdeblore", "Saint-Dalmas", "Saint-Étienne-de-Tinée", "Roubion",
+            "Sainte-Agnès", "Lantosque", "Utelle", "Peïra-Cava", "Col de Turini",
+            "La Bollène-Vésubie", "Belvédère", "Rimplas", "Ilonse", "Roubion",
+            "Serre-Ponçon", "Réallon", "Chabottes", "Orcières", "Puy-Saint-Vincent",
+            "Montgenèvre", "Briançon", "Serre Chevalier", "Névache", "Val-des-Prés",
+            "La Grave", "Villar-d'Arène", "Le Monêtier-les-Bains", "Chantemerle", "Saint-Chaffrey",
+            "Risoul", "Vars", "Saint-Paul-sur-Ubaye", "Barcelonnette", "Jausiers",
+            "Pra-Loup", "Seyne", "Le Sauze", "Allos", "Colmars",
+            "Val-d'Allos", "La Foux-d'Allos", "Le Seignus", "Beuil", "Rouaine",
+            "La Colmiane", "Valdeblore", "Saint-Dalmas", "Saint-Étienne-de-Tinée", "Roubion",
+            
+            // France - Pyrénées
+            "Font-Romeu", "Les Angles", "Formiguères", "Puigmal", "Eyne",
+            "Porté-Puymorens", "Porta", "Bourg-Madame", "Llivia", "Err",
+            "Ur", "Enveitg", "Latour-de-Carol", "Ax-les-Thermes", "Ascou",
+            "Les Monts-d'Olmes", "Mijanès", "Quérigut", "Guzet", "Moulis",
+            "Ustou", "Aulus-les-Bains", "Seix", "Oust", "Sentein",
+            "Biert", "Massat", "Le Port", "La Mongie", "Barèges",
+            "Luz-Saint-Sauveur", "Cauterets", "Gavarnie", "Gèdre", "Luz-Ardiden",
+            "Barèges-La Mongie", "Gourette", "Artouste", "La Pierre Saint-Martin", "Iraty",
+            "Le Somport", "Candanchu", "Astún", "Panticosa", "Formigal",
+            
+            // Suisse - Liste exhaustive
+            "Adelboden", "Aletsch", "Andermatt", "Arosa", "Bettmeralp",
+            "Braunwald", "Champery", "Champéry", "Crans-Montana", "Davos",
+            "Davos Klosters", "Disentis", "Engelberg", "Films", "Flims",
+            "Gstaad", "Grindelwald", "Grindelwald-First", "Grindelwald-Wengen", "Interlaken",
+            "Jungfrau", "Klosters", "Laax", "Lenzerheide", "Leukerbad",
+            "Mürren", "Pontresina", "Saas-Fee", "Samnaun", "Scuol",
+            "St. Moritz", "Verbier", "Wengen", "Zermatt", "Zürs",
+            "Aletsch Arena", "Amden", "Andermatt", "Anzère", "Arosa",
+            "Bettmeralp", "Braunwald", "Champery", "Champéry", "Crans-Montana",
+            "Davos", "Disentis", "Engelberg", "Films", "Flims",
+            "Gstaad", "Grindelwald", "Grindelwald-First", "Grindelwald-Wengen", "Interlaken",
+            "Jungfrau", "Klosters", "Laax", "Lenzerheide", "Leukerbad",
+            "Mürren", "Pontresina", "Saas-Fee", "Samnaun", "Scuol",
+            "St. Moritz", "Verbier", "Wengen", "Zermatt", "Zürs",
+            "Amden", "Andermatt", "Anzère", "Arosa", "Bettmeralp",
+            "Braunwald", "Champery", "Champéry", "Crans-Montana", "Davos",
+            "Disentis", "Engelberg", "Films", "Flims", "Gstaad",
+            "Grindelwald", "Grindelwald-First", "Grindelwald-Wengen", "Interlaken", "Jungfrau",
+            "Klosters", "Laax", "Lenzerheide", "Leukerbad", "Mürren",
+            "Pontresina", "Saas-Fee", "Samnaun", "Scuol", "St. Moritz",
+            
+            // Italie - Liste exhaustive
+            "Alagna", "Alta Badia", "Arabba", "Bardonecchia", "Bormio",
+            "Campitello", "Canazei", "Cervinia", "Cortina d'Ampezzo", "Courmayeur",
+            "Dolomiti", "Folgarida", "Gressoney", "Gressoney-La-Trinité", "Gressoney-Saint-Jean",
+            "Kronplatz", "La Thuile", "Livigno", "Madonna di Campiglio", "Marilleva",
+            "Marmolada", "Monterosa", "Passo del Tonale", "Pila", "Ponte di Legno",
+            "San Martino di Castrozza", "Sauze d'Oulx", "Selva", "Sestrière", "Solda",
+            "Val Gardena", "Val di Fassa", "Val di Fiemme", "Val Senales", "Valtournenche",
+            "Vigo di Fassa", "Alagna", "Alta Badia", "Arabba", "Bardonecchia",
+            "Bormio", "Campitello", "Canazei", "Cervinia", "Cortina d'Ampezzo",
+            "Courmayeur", "Dolomiti", "Folgarida", "Gressoney", "Kronplatz",
+            "La Thuile", "Livigno", "Madonna di Campiglio", "Marilleva", "Marmolada",
+            "Monterosa", "Passo del Tonale", "Pila", "Ponte di Legno", "San Martino di Castrozza",
+            "Sauze d'Oulx", "Selva", "Sestrière", "Solda", "Val Gardena",
+            "Val di Fassa", "Val di Fiemme", "Val Senales", "Valtournenche", "Vigo di Fassa",
+            "Alagna", "Alta Badia", "Arabba", "Bardonecchia", "Bormio",
+            "Campitello", "Canazei", "Cervinia", "Cortina d'Ampezzo", "Courmayeur",
+            
+            // Autriche - Liste exhaustive
+            "Alpbach", "Bad Gastein", "Bad Hofgastein", "Dorfgastein", "Fieberbrunn",
+            "Fulpmes", "Gerlos", "Hintertux", "Hochfügen", "Hochzillertal",
+            "Hopfgarten", "Innsbruck", "Ischgl", "Kappl", "Kitzbühel",
+            "Kirchberg", "Lech", "Lermoos", "Mayrhofen", "Nassfeld",
+            "Neustift", "Obergurgl", "Saalbach", "Sankt Anton", "Sankt Christoph",
+            "Schladming", "Sölden", "St. Johann", "Stubai", "Tux",
+            "Wagrain", "Westendorf", "Wildschönau", "Zell am See", "Zell am Ziller",
+            "Zürs", "Alpbach", "Bad Gastein", "Bad Hofgastein", "Dorfgastein",
+            "Fieberbrunn", "Fulpmes", "Gerlos", "Hintertux", "Hochfügen",
+            "Hochzillertal", "Hopfgarten", "Innsbruck", "Ischgl", "Kappl",
+            "Kitzbühel", "Kirchberg", "Lech", "Lermoos", "Mayrhofen",
+            "Nassfeld", "Neustift", "Obergurgl", "Saalbach", "Sankt Anton",
+            "Sankt Christoph", "Schladming", "Sölden", "St. Johann", "Stubai",
+            "Tux", "Wagrain", "Westendorf", "Wildschönau", "Zell am See",
+            
+            // Allemagne
+            "Garmisch-Partenkirchen", "Oberstdorf", "Oberstaufen", "Balderschwang", "Blaichach",
+            "Burgberg", "Fischen", "Immenstadt", "Missen-Wilhams", "Ofterschwang",
+            "Sonthofen", "Wertach", "Bad Hindelang", "Zugspitze", "Garmisch-Partenkirchen",
+            "Oberstdorf", "Oberstaufen", "Balderschwang", "Blaichach", "Burgberg",
+            "Fischen", "Immenstadt", "Missen-Wilhams", "Ofterschwang", "Sonthofen",
+            
+            // Andorre
+            "Grandvalira", "Vallnord", "Pal", "Arinsal", "Ordino",
+            "Soldeu", "El Tarter", "Canillo", "Encamp", "Pas de la Casa",
+            "Grau Roig", "Grandvalira", "Vallnord", "Pal", "Arinsal",
+            "Soldeu", "El Tarter", "Canillo", "Encamp", "Pas de la Casa",
+            
+            // Espagne
+            "Baqueira-Beret", "Formigal", "Candanchú", "Astún", "Cerler",
+            "Panticosa", "La Molina", "Masella", "Vall de Núria", "Port del Comte",
+            "Baqueira-Beret", "Formigal", "Candanchú", "Astún", "Cerler",
+            "Panticosa", "La Molina", "Masella", "Vall de Núria", "Port del Comte",
+            
+            // États-Unis - Colorado (avec variantes)
+            "Aspen", "Aspen Mountain", "Aspen Highlands", "Buttermilk", "Snowmass",
+            "Vail", "Breckenridge", "Keystone", "Copper Mountain", "Winter Park",
+            "Steamboat", "Telluride", "Crested Butte", "Beaver Creek", "Arapahoe Basin",
+            "Loveland", "Eldora", "Monarch", "Powderhorn", "Sunlight",
+            "Ski Cooper", "Purgatory", "Wolf Creek", "Silverton", "Aspen",
+            "Vail", "Breckenridge", "Keystone", "Copper Mountain", "Winter Park",
+            "Steamboat", "Telluride", "Crested Butte", "Beaver Creek", "Arapahoe Basin",
+            
+            // États-Unis - Utah
+            "Park City", "Deer Valley", "Alta", "Snowbird", "Brighton",
+            "Solitude", "Snowbasin", "Powder Mountain", "Brian Head", "Eagle Point",
+            "Park City", "Deer Valley", "Alta", "Snowbird", "Brighton",
+            "Solitude", "Snowbasin", "Powder Mountain", "Brian Head", "Eagle Point",
+            
+            // États-Unis - Californie
+            "Mammoth Mountain", "Squaw Valley", "Heavenly", "Northstar", "Kirkwood",
+            "Sugar Bowl", "Alpine Meadows", "June Mountain", "Bear Valley", "Dodge Ridge",
+            "Mammoth Mountain", "Squaw Valley", "Heavenly", "Northstar", "Kirkwood",
+            "Sugar Bowl", "Alpine Meadows", "June Mountain", "Bear Valley", "Dodge Ridge",
+            
+            // États-Unis - Wyoming
+            "Jackson Hole", "Grand Targhee", "Snow King", "Jackson Hole", "Grand Targhee",
+            
+            // États-Unis - Montana
+            "Big Sky", "Whitefish", "Bridger Bowl", "Red Lodge", "Discovery",
+            "Big Sky", "Whitefish", "Bridger Bowl", "Red Lodge", "Discovery",
+            
+            // États-Unis - Vermont
+            "Stowe", "Killington", "Sugarbush", "Okemo", "Stratton",
+            "Mount Snow", "Jay Peak", "Smugglers' Notch", "Bolton Valley", "Mad River Glen",
+            "Stowe", "Killington", "Sugarbush", "Okemo", "Stratton",
+            "Mount Snow", "Jay Peak", "Smugglers' Notch", "Bolton Valley", "Mad River Glen",
+            
+            // États-Unis - New Hampshire
+            "Loon Mountain", "Waterville Valley", "Bretton Woods", "Cannon Mountain", "Wildcat",
+            "Attitash", "Cranmore", "Gunstock", "Ragged Mountain", "Sunapee",
+            "Loon Mountain", "Waterville Valley", "Bretton Woods", "Cannon Mountain", "Wildcat",
+            
+            // États-Unis - Maine
+            "Sugarloaf", "Sunday River", "Saddleback", "Shawnee Peak", "Big Squaw",
+            "Sugarloaf", "Sunday River", "Saddleback", "Shawnee Peak", "Big Squaw",
+            
+            // États-Unis - New York
+            "Whiteface", "Gore Mountain", "Hunter Mountain", "Windham", "Belleayre",
+            "Whiteface", "Gore Mountain", "Hunter Mountain", "Windham", "Belleayre",
+            
+            // États-Unis - Idaho
+            "Sun Valley", "Schweitzer", "Bogus Basin", "Grand Targhee", "Silver Mountain",
+            "Sun Valley", "Schweitzer", "Bogus Basin", "Grand Targhee", "Silver Mountain",
+            
+            // États-Unis - Oregon
+            "Mount Bachelor", "Mount Hood", "Timberline", "Mount Ashland", "Willamette Pass",
+            "Mount Bachelor", "Mount Hood", "Timberline", "Mount Ashland", "Willamette Pass",
+            
+            // États-Unis - Washington
+            "Crystal Mountain", "Stevens Pass", "Mount Baker", "Alpental", "Snoqualmie",
+            "Crystal Mountain", "Stevens Pass", "Mount Baker", "Alpental", "Snoqualmie",
+            
+            // États-Unis - Nevada
+            "Lake Tahoe", "Heavenly", "Northstar", "Kirkwood", "Mount Rose",
+            "Lake Tahoe", "Heavenly", "Northstar", "Kirkwood", "Mount Rose",
+            
+            // États-Unis - Nouveau-Mexique
+            "Taos", "Ski Santa Fe", "Angel Fire", "Red River", "Sipapu",
+            "Taos", "Ski Santa Fe", "Angel Fire", "Red River", "Sipapu",
+            
+            // États-Unis - Arizona
+            "Arizona Snowbowl", "Sunrise Park", "Mount Lemmon", "Arizona Snowbowl", "Sunrise Park",
+            
+            // Canada - Colombie-Britannique
+            "Whistler", "Blackcomb", "Whistler Blackcomb", "Big White", "Silver Star",
+            "Sun Peaks", "Apex Mountain", "Fernie", "Kimberley", "Panorama",
+            "Red Mountain", "Revelstoke", "Whitewater", "Cypress Mountain", "Grouse Mountain",
+            "Mount Seymour", "Hemlock Valley", "Manning Park", "Mount Washington", "Whistler",
+            
+            // Canada - Alberta
+            "Banff", "Lake Louise", "Sunshine Village", "Mount Norquay", "Nakiska",
+            "Marmot Basin", "Castle Mountain", "Fortress Mountain", "Banff", "Lake Louise",
+            
+            // Canada - Québec
+            "Mont Tremblant", "Mont-Sainte-Anne", "Le Massif", "Stoneham", "Bromont",
+            "Owl's Head", "Sutton", "Orford", "Bromont", "Mont Tremblant",
+            
+            // Canada - Ontario
+            "Blue Mountain", "Mount St. Louis", "Horseshoe Valley", "Glen Eden", "Lakeridge",
+            "Blue Mountain", "Mount St. Louis", "Horseshoe Valley", "Glen Eden", "Lakeridge",
+            
+            // Canada - Autres provinces
+            "Marble Mountain", "Smokey Mountain", "Wentworth", "Martock", "Crabbe Mountain",
+            "Marble Mountain", "Smokey Mountain", "Wentworth", "Martock", "Crabbe Mountain",
+            
+            // Japon
+            "Niseko", "Hakuba", "Shiga Kogen", "Nozawa Onsen", "Rusutsu",
+            "Furano", "Tomamu", "Kiroro", "Sapporo Teine", "Rusutsu",
+            
+            // Corée du Sud
+            "Yongpyong", "High1", "Alpensia", "Phoenix Park", "Vivaldi Park",
+            "Yongpyong", "High1", "Alpensia", "Phoenix Park", "Vivaldi Park",
+            
+            // Nouvelle-Zélande
+            "Queenstown", "Wanaka", "Cardrona", "Treble Cone", "The Remarkables",
+            "Coronet Peak", "Mount Hutt", "Turoa", "Whakapapa", "Queenstown",
+            
+            // Australie
+            "Thredbo", "Perisher", "Falls Creek", "Mount Hotham", "Charlotte Pass",
+            "Mount Buller", "Mount Stirling", "Thredbo", "Perisher", "Falls Creek",
+            
+            // Chili
+            "Valle Nevado", "Portillo", "La Parva", "El Colorado", "Nevados de Chillán",
+            "Valle Nevado", "Portillo", "La Parva", "El Colorado", "Nevados de Chillán",
+            
+            // Argentine
+            "Bariloche", "Las Leñas", "Chapelco", "Cerro Catedral", "Cerro Bayo",
+            "Bariloche", "Las Leñas", "Chapelco", "Cerro Catedral", "Cerro Bayo",
+            
+            // Bulgarie
+            "Bansko", "Borovets", "Pamporovo", "Vitosha", "Bansko",
+            "Borovets", "Pamporovo", "Vitosha", "Bansko", "Borovets",
+            
+            // Roumanie
+            "Poiana Brașov", "Predeal", "Sinaia", "Busteni", "Azuga",
+            "Poiana Brașov", "Predeal", "Sinaia", "Busteni", "Azuga",
+            
+            // Pologne
+            "Zakopane", "Szczyrk", "Krynica", "Szklarska Poręba", "Zakopane",
+            "Szczyrk", "Krynica", "Szklarska Poręba", "Zakopane", "Szczyrk",
+            
+            // République tchèque
+            "Špindlerův Mlýn", "Pec pod Sněžkou", "Harrachov", "Rokytnice", "Špindlerův Mlýn",
+            
+            // Slovaquie
+            "Jasná", "Tatranská Lomnica", "Štrbské Pleso", "Jasná", "Tatranská Lomnica",
+            
+            // Slovénie
+            "Kranjska Gora", "Bohinj", "Krvavec", "Kranjska Gora", "Bohinj",
+            
+            // Croatie
+            "Sljeme", "Platak", "Sljeme", "Platak", "Sljeme",
+            
+            // Bosnie-Herzégovine
+            "Jahorina", "Bjelašnica", "Jahorina", "Bjelašnica", "Jahorina",
+            
+            // Serbie
+            "Kopaonik", "Stara Planina", "Kopaonik", "Stara Planina", "Kopaonik",
+            
+            // Grèce
+            "Parnassos", "Vasilitsa", "Parnassos", "Vasilitsa", "Parnassos",
+            
+            // Turquie
+            "Uludağ", "Palandöken", "Erciyes", "Uludağ", "Palandöken",
+            
+            // Iran
+            "Dizin", "Shemshak", "Tochal", "Dizin", "Shemshak",
+            
+            // Géorgie
+            "Gudauri", "Bakuriani", "Gudauri", "Bakuriani", "Gudauri",
+            
+            // Arménie
+            "Tsaghkadzor", "Jermuk", "Tsaghkadzor", "Jermuk", "Tsaghkadzor",
+            
+            // Kazakhstan
+            "Shymbulak", "Ak-Bulak", "Shymbulak", "Ak-Bulak", "Shymbulak",
+            
+            // Kirghizistan
+            "Karakol", "Jyrgalan", "Karakol", "Jyrgalan", "Karakol",
+            
+            // Chine
+            "Yabuli", "Beidahu", "Changbaishan", "Yabuli", "Beidahu",
+            
+            // Inde
+            "Gulmarg", "Auli", "Manali", "Gulmarg", "Auli",
+            
+            // Népal
+            "Annapurna", "Everest Base Camp", "Annapurna", "Everest Base Camp", "Annapurna",
+            
+            // Afrique du Sud
+            "Tiffindell", "Afriski", "Tiffindell", "Afriski", "Tiffindell",
+            
+            // Lesotho
+            "Afriski", "Oxbow", "Afriski", "Oxbow", "Afriski",
+            
+            // Maroc
+            "Oukaïmeden", "Ifrane", "Oukaïmeden", "Ifrane", "Oukaïmeden",
+            
+            // Algérie
+            "Chréa", "Tikjda", "Chréa", "Tikjda", "Chréa",
+            
+            // Liban
+            "Mzaar", "Faraya", "Cedars", "Mzaar", "Faraya",
+            
+            // Russie - Oural
+            "Abzakovo", "Bannoe", "Adzhigardak", "Abzakovo", "Bannoe",
+            
+            // Russie - Caucase
+            "Krasnaya Polyana", "Dombay", "Elbrus", "Krasnaya Polyana", "Dombay",
+            
+            // Russie - Sibérie
+            "Sheregesh", "Belokurikha", "Sheregesh", "Belokurikha", "Sheregesh",
+            
+            // Norvège
+            "Hemsedal", "Trysil", "Geilo", "Voss", "Norefjell",
+            "Hafjell", "Kvitfjell", "Hemsedal", "Trysil", "Geilo",
+            
+            // Suède
+            "Åre", "Sälen", "Idre", "Vemdalen", "Riksgränsen",
+            "Åre", "Sälen", "Idre", "Vemdalen", "Riksgränsen",
+            
+            // Finlande
+            "Levi", "Ruka", "Ylläs", "Pyhä", "Luosto",
+            "Levi", "Ruka", "Ylläs", "Pyhä", "Luosto",
+            
+            // Islande
+            "Bláfjöll", "Hlíðarfjall", "Bláfjöll", "Hlíðarfjall", "Bláfjöll",
+            
+            // Groenland
+            "Nuuk", "Sisimiut", "Nuuk", "Sisimiut", "Nuuk",
+        ];
+        
+        // Coordonnées précises pour les stations connues (défini avant getBaseStationName)
+        const knownStationsCoords = {
+            'Verbier': [46.0972, 7.2264],
+            'Zermatt': [46.0207, 7.7491],
+            'Tignes': [45.4694, 6.9114],
+            'Val d\'Isère': [45.4486, 6.9792],
+            'Val Thorens': [45.2972, 6.5803],
+            'Les Arcs': [45.5833, 6.7833],
+            'La Plagne': [45.5083, 6.6750],
+            'Courchevel': [45.4144, 6.6356],
+            'Méribel': [45.3967, 6.5650],
+            'Chamonix': [45.9237, 6.8694],
+            'St. Moritz': [46.4908, 9.8353],
+            'Davos': [46.8040, 9.8369],
+            'Gstaad': [46.4722, 7.2856],
+            'Crans-Montana': [46.3083, 7.4667],
+            'Saas-Fee': [46.1083, 7.9264],
+            'Kitzbühel': [47.4467, 12.3917],
+            'St. Anton': [47.1283, 10.2633],
+            'Ischgl': [47.0133, 10.2917],
+            'Sölden': [46.9667, 11.0000],
+            'Lech': [47.2081, 10.1417],
+            'Zürs': [47.1833, 10.0833],
+            'Warth': [47.2500, 10.1833],
+            'Obergurgl': [46.8667, 11.0333],
+            'Hintertux': [47.0833, 11.6667],
+            'Fieberbrunn': [47.4833, 12.5500],
+            'Saalbach': [47.2833, 12.6333],
+            'Hinterglemm': [47.3833, 12.6000],
+            'Zell am See': [47.3167, 12.8000],
+            'Kaprun': [47.2667, 12.7500],
+            'Bad Gastein': [47.1167, 13.1333],
+            'Schladming': [47.4000, 13.6833],
+            'Mayrhofen': [47.1667, 11.8667],
+            'Sestrière': [44.9500, 6.8667],
+            'Sauze d\'Oulx': [45.0167, 6.8500],
+            'Bardonecchia': [45.0833, 6.7000],
+            'Claviere': [44.9500, 6.7500],
+            'Cesana': [44.9500, 6.8000],
+            'La Rosière': [45.6333, 6.8833],
+            'Sainte-Foy-Tarentaise': [45.5833, 6.8833],
+            'Les Saisies': [45.7833, 6.4167],
+            'Peisey-Vallandry': [45.5500, 6.8167],
+            'Val Claret': [45.4694, 6.9114],
+            'Tignes le Lac': [45.4694, 6.9114],
+            'Tignes les Brévières': [45.4500, 6.9167],
+            'La Tania': [45.4167, 6.6167],
+            'Brides-les-Bains': [45.4500, 6.5667],
+            'Saint-Martin-de-Belleville': [45.3833, 6.5000],
+            'Les Belleville': [45.3833, 6.5000],
+            'Orelle': [45.2000, 6.5333],
+            'Valmorel': [45.4333, 6.4333],
+            'Doucy': [45.4167, 6.4167],
+            'Notre-Dame-de-Bellecombe': [45.8167, 6.5500],
+            'Praz-sur-Arly': [45.8333, 6.5667],
+            'Combloux': [45.9000, 6.6333],
+            'Les Contamines': [45.8167, 6.7167],
+            'Cordon': [45.9000, 6.6167],
+            'Passy': [45.9167, 6.6833],
+            'Sallanches': [45.9500, 6.6333],
+            'Domancy': [45.9167, 6.6500],
+            'Thônes': [45.8833, 6.3167],
+            'Saint-Jean-de-Sixt': [45.9000, 6.3833],
+            'Flumet': [45.8167, 6.5167],
+            'Châtel': [46.2667, 6.8500],
+            'Abondance': [46.2833, 6.7167],
+            'La Chapelle-d\'Abondance': [46.3000, 6.7833],
+            'Torgon': [46.3000, 6.9000],
+            'Les Crosets': [46.2500, 6.8500],
+            'Champéry': [46.1833, 6.8667],
+            'Champoussin': [46.2167, 6.8500],
+            'Morgins': [46.2333, 6.8500],
+            'Val-d\'Illiez': [46.1833, 6.8833],
+            'Villars-sur-Ollon': [46.3000, 7.0500],
+            'Leysin': [46.3500, 7.0167],
+            'Gryon': [46.2833, 7.0667],
+            'Nendaz': [46.1833, 7.3000],
+            'Veysonnaz': [46.2000, 7.3500],
+            'Thyon': [46.2167, 7.3500],
+            'Grimentz': [46.1833, 7.5667],
+            'Arolla': [46.0333, 7.4833],
+            'Evolène': [46.1167, 7.5000],
+            'Beuil': [44.1000, 6.9833],
+            'Risoul': [44.6500, 6.6333],
+            'Vars': [44.5500, 6.7000],
+            'Montgenèvre': [44.9333, 6.7167],
+            'Briançon': [44.9000, 6.6500],
+            'Formiguères': [42.6167, 2.1000],
+            'Adelboden': [46.5000, 7.5667],
+            'Aletsch': [46.4000, 8.0333],
+            'Bettmeralp': [46.3833, 8.0667],
+            'Alagna': [45.8500, 7.9333],
+            'Alta Badia': [46.6000, 11.8500],
+            'Cervinia': [45.9333, 7.6167],
+            'Livigno': [46.5361, 10.1361],
+            'Garmisch-Partenkirchen': [47.5000, 11.1000],
+            'Oberstdorf': [47.4167, 10.2833],
+            'Vallnord': [42.5167, 1.7333],
+            'Deer Valley': [40.6372, -111.4783],
+            'Heavenly': [38.9394, -119.9403],
+            'Aspen': [39.1911, -106.8175],
+            'Vail': [39.6403, -106.3742],
+            'Breckenridge': [39.4817, -106.0384],
+            'Park City': [40.6461, -111.4980],
+            'Whistler': [50.1163, -122.9574],
+            'Banff': [51.1784, -115.5708],
+            'Cortina d\'Ampezzo': [46.5369, 12.1353],
+            'Livigno': [46.5361, 10.1361],
+            'Bormio': [46.4681, 10.3731],
+            'Les Menuires': [45.3167, 6.5333],
+            'Avoriaz': [46.1917, 6.7750],
+            'Morzine': [46.1800, 6.7083],
+            'Les Gets': [46.1583, 6.6667],
+            'Megève': [45.8569, 6.6181],
+            'La Clusaz': [45.9042, 6.4222],
+            'Alpe d\'Huez': [45.0917, 6.0667],
+            'Les Deux Alpes': [45.0083, 6.1250],
+            'Serre Chevalier': [44.9417, 6.5667],
+            'Isola 2000': [44.1833, 7.1333],
+            'Auron': [44.2167, 7.0500],
+            'Valberg': [44.1000, 6.9833],
+            'Font-Romeu': [42.5000, 2.0333],
+            'Les Angles': [42.5833, 2.0833],
+            'La Mongie': [42.9000, 0.1333],
+            'Barèges': [42.9000, 0.0667],
+            'Grandvalira': [42.5167, 1.7333],
+            'Soldeu': [42.5667, 1.6667],
+            'Baqueira-Beret': [42.7000, 0.9333],
+            'Formigal': [42.7667, -0.3833],
+            'Mammoth Mountain': [37.6308, -119.0326],
+            'Squaw Valley': [39.1967, -120.2394],
+            'Heavenly': [38.9394, -119.9403],
+            'Jackson Hole': [43.5875, -110.8278],
+            'Big Sky': [45.2850, -111.3828],
+            'Stowe': [44.4653, -72.6872],
+            'Killington': [43.6175, -72.7797],
+            'Mont Tremblant': [46.2125, -74.3903],
+            'Lake Louise': [51.4250, -116.1778]
+        };
+        
+        // Liste des suffixes qui indiquent des variantes
+        const variantSuffixes = ["Nord", "Sud", "Est", "Ouest", "Centre", "Village", "Base", "1600", "1800", "1850", "2000", "2100", "Médran", "Savoleyres", "La Tzoumaz", "Mottaret"];
+        
+        // Fonction pour extraire le nom de base d'une station
+        function getBaseStationName(name) {
+            // Pour les stations connues, retourner le nom exact
+            if (knownStationsCoords[name]) {
+                return name;
+            }
+            
+            // Vérifier si c'est une variante d'une station connue
+            for (const knownName of Object.keys(knownStationsCoords)) {
+                if (name.startsWith(knownName + ' ') || name.startsWith(knownName + '-')) {
+                    return knownName;
+                }
+            }
+            
+            // Vérifier si le nom se termine par un suffixe de variante
+            for (const suffix of variantSuffixes) {
+                const spaceSuffix = ' ' + suffix;
+                const dashSuffix = '-' + suffix;
+                if (name.endsWith(spaceSuffix)) {
+                    return name.substring(0, name.length - spaceSuffix.length);
+                }
+                if (name.endsWith(dashSuffix)) {
+                    return name.substring(0, name.length - dashSuffix.length);
+                }
+            }
+            
+            return name; // Si pas de variante détectée, retourner le nom tel quel
+        }
+        
+        // Générer toutes les stations (sans variantes pour éviter les doublons)
+        function getAllStations() {
+            const stations = [];
+            const usedNames = new Set();
+            const addedKnownStations = new Set(); // Pour suivre les stations connues déjà ajoutées
+            
+            realStations.forEach((name, index) => {
+                // Ne pas ajouter si c'est un doublon exact
+                if (usedNames.has(name)) {
+                    return;
+                }
+                
+                const baseName = getBaseStationName(name);
+                
+                // Si c'est une variante d'une station connue (mais pas la station elle-même)
+                // Ex: "Verbier Médran" est une variante de "Verbier"
+                if (knownStationsCoords[baseName] && name !== baseName && baseName !== name) {
+                    // Ne pas ajouter les variantes de stations connues
+                    // Mais s'assurer que la station de base est ajoutée
+                    if (!addedKnownStations.has(baseName)) {
+                        addedKnownStations.add(baseName);
+                        usedNames.add(baseName);
+                        let locationIndex = 0;
+                        if (index < 100) locationIndex = Math.floor(Math.random() * 3);
+                        else if (index < 200) locationIndex = 3 + Math.floor(Math.random() * 4);
+                        else if (index < 300) locationIndex = 7 + Math.floor(Math.random() * 4);
+                        else locationIndex = Math.floor(Math.random() * locations.length);
+                        
+                        stations.push(createStation(baseName, locationIndex));
+                    }
+                    // Ne pas ajouter la variante
+                    return;
+                }
+                
+                // Si c'est une station connue elle-même (pas une variante)
+                if (knownStationsCoords[name]) {
+                    if (!addedKnownStations.has(name)) {
+                        addedKnownStations.add(name);
+                        usedNames.add(name);
+                        let locationIndex = 0;
+                        if (index < 100) locationIndex = Math.floor(Math.random() * 3);
+                        else if (index < 200) locationIndex = 3 + Math.floor(Math.random() * 4);
+                        else if (index < 300) locationIndex = 7 + Math.floor(Math.random() * 4);
+                        else locationIndex = Math.floor(Math.random() * locations.length);
+                        
+                        stations.push(createStation(name, locationIndex));
+                    }
+                    return;
+                }
+                
+                // Pour toutes les autres stations (y compris celles qui ne sont pas dans knownStationsCoords),
+                // les ajouter telles quelles
+                usedNames.add(name);
+                let locationIndex = 0;
+                if (index < 100) locationIndex = Math.floor(Math.random() * 3);
+                else if (index < 200) locationIndex = 3 + Math.floor(Math.random() * 4);
+                else if (index < 300) locationIndex = 7 + Math.floor(Math.random() * 4);
+                else locationIndex = Math.floor(Math.random() * locations.length);
+                
+                stations.push(createStation(name, locationIndex));
+            });
+            
+            // Pour atteindre ~2200 stations, ajouter d'autres vraies stations
+            // mais seulement si elles n'existent pas déjà
+            const additionalStations = [
+                "Aime", "Aime-la-Plagne", "Aime 2000", "Aime 2100",
+                "Bourg-Saint-Maurice", "Landry", "Peisey-Nancroix", "Villaroger",
+                "Tignes Val Claret", "Tignes Le Lac", "Tignes Les Brévières",
+                "Val d'Isère Le Fornet", "Val d'Isère La Daille", "Val d'Isère Le Laisinant",
+                "Les Arcs 1600", "Les Arcs 1800", "Les Arcs 1950", "Les Arcs 2000",
+                "La Plagne Aime 2000", "La Plagne Bellecôte", "La Plagne Belle Plagne",
+                "Courchevel 1300", "Courchevel 1550", "Courchevel 1650", "Courchevel 1850",
+                "Méribel Centre", "Méribel Mottaret", "Méribel Village",
+                "Chamonix Mont-Blanc", "Chamonix Les Houches", "Chamonix Argentière",
+                "Verbier Médran", "Verbier Savoleyres", "Verbier La Tzoumaz",
+                "Zermatt Matterhorn", "Zermatt Gornergrat", "Zermatt Schwarzsee",
+                "St. Moritz Corviglia", "St. Moritz Corvatsch", "St. Moritz Diavolezza",
+                "Davos Parsenn", "Davos Jakobshorn", "Davos Pischa", "Davos Rinerhorn",
+                "Gstaad Saanenmöser", "Gstaad Schönried", "Gstaad Zweisimmen",
+                "Crans-Montana Aminona", "Crans-Montana Barzettes", "Crans-Montana Cry d'Err",
+                "Saas-Fee Alpin", "Saas-Fee Hannig", "Saas-Fee Spielboden",
+                "Kitzbühel Hahnenkamm", "Kitzbühel Pengelstein", "Kitzbühel Resterhöhe",
+                "St. Anton Galzig", "St. Anton Gampen", "St. Anton Kapall",
+                "Ischgl Idalp", "Ischgl Pardatschgrat", "Ischgl Silvretta",
+                "Sölden Gaislachkogl", "Sölden Giggijoch", "Sölden Rotkogl",
+                "Aspen Highlands", "Aspen Buttermilk", "Aspen Snowmass",
+                "Vail Back Bowls", "Vail Blue Sky Basin", "Vail Lionshead",
+                "Breckenridge Peak 8", "Breckenridge Peak 9", "Breckenridge Peak 10",
+                "Park City Canyons", "Park City Main Street", "Park City Old Town",
+                "Whistler Blackcomb", "Whistler Creekside", "Whistler Village",
+                "Banff Sunshine", "Banff Lake Louise", "Banff Norquay",
+                "Cortina d'Ampezzo Faloria", "Cortina d'Ampezzo Tofane", "Cortina d'Ampezzo Cristallo",
+                "Livigno Mottolino", "Livigno Carosello", "Livigno Costaccia",
+                "Bormio Bormio 2000", "Bormio Cima Bianca", "Bormio Vallecetta",
+                "Les Menuires Reberty", "Les Menuires Bruyères", "Les Menuires Mont de la Chambre",
+                "Avoriaz Prodains", "Avoriaz Morzine", "Avoriaz Les Lindarets",
+                "Morzine Pleney", "Morzine Super Morzine", "Morzine Les Gets",
+                "Les Gets Mont Chéry", "Les Gets Chavannes", "Les Gets Perrières",
+                "Megève Mont d'Arbois", "Megève Rochebrune", "Megève Jaillet",
+                "La Clusaz Aravis", "La Clusaz Balme", "La Clusaz Beauregard",
+                "Alpe d'Huez Grandes Rousses", "Alpe d'Huez Signal", "Alpe d'Huez Vaujany",
+                "Les Deux Alpes Jandri", "Les Deux Alpes Mont de Lans", "Les Deux Alpes Venosc",
+                "Serre Chevalier Chantemerle", "Serre Chevalier Monêtier", "Serre Chevalier Villeneuve",
+                "Isola 2000 Isola", "Isola 2000 La Station", "Isola 2000 Les Neiges",
+                "Auron La Forêt", "Auron Les Neiges", "Auron La Station",
+                "Valberg La Station", "Valberg Le Village", "Valberg Les Neiges",
+                "Font-Romeu Pyrénées 2000", "Font-Romeu La Calme", "Font-Romeu Les Angles",
+                "Les Angles Puyvalador", "Les Angles Formiguères", "Les Angles La Quillane",
+                "La Mongie Tourmalet", "La Mongie Barèges", "La Mongie Pic du Midi",
+                "Barèges La Mongie", "Barèges Tourmalet", "Barèges Pic du Midi",
+                "Grandvalira Pas de la Casa", "Grandvalira Grau Roig", "Grandvalira Soldeu",
+                "Soldeu El Tarter", "Soldeu Canillo", "Soldeu Encamp",
+                "Baqueira-Beret Baqueira", "Baqueira-Beret Beret", "Baqueira-Beret Bonaigua",
+                "Formigal Panticosa", "Formigal Sallent", "Formigal Lanuza",
+                "Mammoth Mountain Main Lodge", "Mammoth Mountain Canyon Lodge", "Mammoth Mountain Eagle Lodge",
+                "Squaw Valley Alpine Meadows", "Squaw Valley High Camp", "Squaw Valley Gold Coast",
+                "Heavenly California", "Heavenly Nevada", "Heavenly Sky Deck",
+                "Jackson Hole Teton Village", "Jackson Hole Rendezvous", "Jackson Hole Après Vous",
+                "Big Sky Lone Peak", "Big Sky Andesite", "Big Sky Moonlight Basin",
+                "Stowe Spruce Peak", "Stowe Mount Mansfield", "Stowe Smugglers Notch",
+                "Killington Killington Peak", "Killington Bear Mountain", "Killington Pico",
+                "Mont Tremblant Versant Sud", "Mont Tremblant Versant Nord", "Mont Tremblant Edge",
+                "Lake Louise Ski Area", "Lake Louise Back Bowls", "Lake Louise Larch Area"
+            ];
+            
+            additionalStations.forEach((name) => {
+                // Ne pas ajouter si c'est un doublon exact
+                if (usedNames.has(name)) {
+                    return;
+                }
+                
+                const baseName = getBaseStationName(name);
+                
+                // Si c'est une variante d'une station connue, ne pas l'ajouter
+                if (knownStationsCoords[baseName] && name !== baseName) {
+                    return;
+                }
+                
+                // Ajouter la station si elle n'existe pas déjà et qu'on n'a pas atteint la limite
+                if (!usedNames.has(name) && stations.length < 2200) {
+                    usedNames.add(name);
+                    const locationIndex = Math.floor(Math.random() * locations.length);
+                    stations.push(createStation(name, locationIndex));
+                }
+            });
+            
+            return stations;
+        }
+        
+        let allStations = [];
+        let currentSort = '24h';
+        let map = null;
+        let markerClusterGroup = null;
+        let stationCoordinatesCache = new Map();
+        
+        // Initialiser les stations
+        allStations = getAllStations();
+        console.log('Stations générées:', allStations.length);
+        console.log('Stations dans realStations:', realStations.length);
+        console.log('Stations uniques générées:', new Set(allStations.map(s => s.name)).size);
+        
+        // Vérifier les stations manquantes
+        const generatedNames = new Set(allStations.map(s => s.name));
+        const missingStations = realStations.filter(name => {
+            const baseName = getBaseStationName(name);
+            return !generatedNames.has(name) && !generatedNames.has(baseName);
+        });
+        if (missingStations.length > 0) {
+            console.log('Stations manquantes:', missingStations.slice(0, 20));
+        }
+        
+        if (allStations.length > 0) {
+            console.log('Première station:', allStations[0]);
+        }
+        
+        // Fonction pour obtenir les coordonnées
+        function getStationCoordinates(station) {
+            if (stationCoordinatesCache.has(station.name)) {
+                return stationCoordinatesCache.get(station.name);
+            }
+            
+            // Vérifier d'abord si c'est une station connue avec coordonnées précises
+            // Chercher le nom exact d'abord
+            if (knownStationsCoords[station.name]) {
+                const coords = knownStationsCoords[station.name];
+                stationCoordinatesCache.set(station.name, coords);
+                return coords;
+            }
+            
+            // Chercher si le nom de la station contient un nom de station connue
+            for (const [knownName, coords] of Object.entries(knownStationsCoords)) {
+                if (station.name.includes(knownName) || knownName.includes(station.name)) {
+                    stationCoordinatesCache.set(station.name, coords);
+                    return coords;
+                }
+            }
+            
+            const location = station.location.toLowerCase();
+            const regionCoords = {
+                'alpes du nord': [45.5, 6.5],
+                'alpes du sud': [44.5, 6.0],
+                'pyrénées': [42.7, 1.0],
+                'valais': [46.2, 7.4],
+                'grisons': [46.6, 9.5],
+                'berne': [46.7, 7.4],
+                'vaud': [46.5, 6.6],
+                'tyrol': [47.3, 11.4],
+                'salzbourg': [47.8, 13.0],
+                'vorarlberg': [47.2, 9.9],
+                'styrie': [47.4, 13.6],
+                'piémont': [45.1, 7.7],
+                'vallée d\'aoste': [45.7, 7.3],
+                'trentin': [46.1, 11.1],
+                'lombardie': [46.0, 10.2],
+                'bavière': [47.5, 11.1],
+                'bade-wurtemberg': [47.6, 7.8],
+                'andorre': [42.5, 1.5],
+                'catalogne': [42.3, 1.7],
+                'aragon': [42.6, 0.3],
+                'colorado': [39.7, -106.0],
+                'utah': [40.6, -111.5],
+                'californie': [38.9, -120.0],
+                'wyoming': [43.6, -110.8],
+                'montana': [45.3, -111.4],
+                'vermont': [44.3, -72.8],
+                'colombie-britannique': [50.1, -122.9],
+                'alberta': [51.1, -115.6],
+                'québec': [46.1, -74.0],
+                'ontario': [44.4, -79.3]
+            };
+            
+            let coords = [46.5, 6.5];
+            let foundRegion = false;
+            
+            for (const [region, regionCenter] of Object.entries(regionCoords)) {
+                if (location.includes(region)) {
+                    const hash = station.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                    const latOffset = ((hash % 100) - 50) / 100;
+                    const lngOffset = (((hash * 7) % 100) - 50) / 100;
+                    coords = [
+                        regionCenter[0] + latOffset * 0.5,
+                        regionCenter[1] + lngOffset * 0.5
+                    ];
+                    foundRegion = true;
+                    break;
+                }
+            }
+            
+            // Si aucune région trouvée, essayer de deviner depuis le nom
+            if (!foundRegion) {
+                const guessedLocation = getStationLocation(station.name);
+                if (guessedLocation) {
+                    const guessedLocationLower = guessedLocation.toLowerCase();
+                    for (const [region, regionCenter] of Object.entries(regionCoords)) {
+                        if (guessedLocationLower.includes(region)) {
+                            const hash = station.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                            const latOffset = ((hash % 100) - 50) / 100;
+                            const lngOffset = (((hash * 7) % 100) - 50) / 100;
+                            coords = [
+                                regionCenter[0] + latOffset * 0.5,
+                                regionCenter[1] + lngOffset * 0.5
+                            ];
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            stationCoordinatesCache.set(station.name, coords);
+            return coords;
+        }
+        
+        function getSortValue(station, sortType) {
+            switch(sortType) {
+                case '24h': return station.snow24h;
+                case '2j': return station.snow2j;
+                case '3j': return station.snow3j;
+                case '4j': return station.snow4j;
+                case '5j': return station.snow5j;
+                case '6j': return station.snow6j;
+                case '7j': return station.snow7j;
+                case 'f3j': return station.forecast3j;
+                case 'f4j': return station.forecast4j;
+                case 'f5j': return station.forecast5j;
+                case 'f6j': return station.forecast6j;
+                default: return station.snow24h;
+            }
+        }
+        
+        function getSortLabel(sortType) {
+            switch(sortType) {
+                case '24h': return 'Dernières 24h';
+                case '2j': return '2 derniers jours';
+                case '3j': return '3 derniers jours';
+                case '4j': return '4 derniers jours';
+                case '5j': return '5 derniers jours';
+                case '6j': return '6 derniers jours';
+                case '7j': return '7 derniers jours';
+                case 'f3j': return 'Dans 3 jours';
+                case 'f4j': return 'Dans 4 jours';
+                case 'f5j': return 'Dans 5 jours';
+                case 'f6j': return 'Dans 6 jours';
+                default: return 'Dernières 24h';
+            }
+        }
+        
+        function getSnowClass(snow24h) {
+            if (snow24h >= 30) return 'high-snow';
+            if (snow24h >= 10) return 'medium-snow';
+            if (snow24h > 0) return 'low-snow';
+            return 'no-snow';
+        }
+        
+        function sortStations(stations, sortType) {
+            return [...stations].sort((a, b) => {
+                const valueA = getSortValue(a, sortType);
+                const valueB = getSortValue(b, sortType);
+                return valueB - valueA;
+            });
+        }
+        
+        function searchStations(query) {
+            if (!query.trim()) return allStations;
+            const lowerQuery = query.toLowerCase();
+            return allStations.filter(station => 
+                station.name.toLowerCase().includes(lowerQuery) ||
+                station.location.toLowerCase().includes(lowerQuery)
+            );
+        }
+        
+        // Initialiser la carte
+        function initMap() {
+            console.log('Initialisation de la carte...');
+            console.log('Nombre de stations:', allStations.length);
+            
+            map = L.map('map', {
+                zoomControl: true,
+                preferCanvas: true
+            }).setView([46.2, 7.4], 7); // Centré sur le Valais (où se trouve Verbier)
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+                updateWhenZooming: false,
+                updateWhenIdle: true
+            }).addTo(map);
+            
+            markerClusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                chunkDelay: 50,
+                maxClusterRadius: 50,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                zoomToBoundsOnClick: true
+            });
+            
+            map.addLayer(markerClusterGroup);
+            
+            if (allStations && allStations.length > 0) {
+                console.log('Ajout de', allStations.length, 'stations sur la carte');
+                updateMapMarkers(allStations);
+            } else {
+                console.error('Aucune station trouvée!');
+            }
+        }
+        
+        function updateMapMarkers(stations) {
+            if (!map || !markerClusterGroup) {
+                console.error('Carte ou cluster group non initialisé');
+                return;
+            }
+            
+            if (!stations || stations.length === 0) {
+                console.error('Aucune station à afficher');
+                return;
+            }
+            
+            const stationsToShow = stations.slice(0, 1000);
+            console.log('Mise à jour de', stationsToShow.length, 'marqueurs');
+            markerClusterGroup.clearLayers();
+            
+            const markers = [];
+            const batchSize = 50;
+            const stationIndexMap = new Map();
+            allStations.forEach((s, idx) => {
+                stationIndexMap.set(s.name, idx);
+            });
+            
+            for (let i = 0; i < stationsToShow.length; i += batchSize) {
+                const batch = stationsToShow.slice(i, i + batchSize);
+                const batchMarkers = [];
+                
+                batch.forEach((station) => {
+                    try {
+                        const globalIndex = stationIndexMap.get(station.name) || 0;
+                        const coords = getStationCoordinates(station);
+                        
+                        if (!coords || !Array.isArray(coords) || coords.length !== 2) {
+                            console.warn('Coordonnées invalides pour', station.name, coords);
+                            return;
+                        }
+                        
+                        const displayValue = getSortValue(station, currentSort);
+                        const snowClass = getSnowClass(displayValue);
+                        
+                        const customIcon = L.divIcon({
+                            className: 'custom-marker-div',
+                            html: `<div class="custom-marker ${snowClass}"></div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 30],
+                            popupAnchor: [0, -30]
+                        });
+                        
+                        const marker = L.marker(coords, { icon: customIcon });
+                        
+                        const popupContent = `
+                            <div class="custom-popup">
+                                <div class="popup-station-name">${station.name}</div>
+                                <div class="popup-station-location">📍 ${station.location}</div>
+                                <div class="popup-station-snow">
+                                    ❄️ ${displayValue} cm (${getSortLabel(currentSort)})
+                                </div>
+                                <div class="popup-station-info">
+                                    <div class="popup-info-item">
+                                        <div class="popup-info-label">En bas</div>
+                                        <div class="popup-info-value">${station.snowBottom} cm</div>
+                                    </div>
+                                    <div class="popup-info-item">
+                                        <div class="popup-info-label">En haut</div>
+                                        <div class="popup-info-value">${station.snowTop} cm</div>
+                                    </div>
+                                    <div class="popup-info-item">
+                                        <div class="popup-info-label">Pistes</div>
+                                        <div class="popup-info-value">${station.pistes}</div>
+                                    </div>
+                                    <div class="popup-info-item">
+                                        <div class="popup-info-label">Statut</div>
+                                        <div class="popup-info-value">${station.status}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        marker.bindPopup(popupContent);
+                        batchMarkers.push(marker);
+                        markers.push(marker);
+                    } catch (error) {
+                        console.error('Erreur lors de la création du marqueur pour', station.name, error);
+                    }
+                });
+                
+                markerClusterGroup.addLayers(batchMarkers);
+            }
+            
+            if (stationsToShow.length < 500 && markers.length > 0) {
+                setTimeout(() => {
+                    try {
+                        const group = new L.featureGroup(markers);
+                        map.fitBounds(group.getBounds().pad(0.1), { maxZoom: 10 });
+                    } catch (e) {}
+                }, 200);
+            }
+            
+            // Mettre à jour les stats
+            document.getElementById('totalStations').textContent = stations.length.toLocaleString();
+            const avgSnow = stations.length > 0 
+                ? (stations.reduce((sum, s) => sum + getSortValue(s, currentSort), 0) / stations.length).toFixed(1)
+                : 0;
+            document.getElementById('avgSnow').textContent = avgSnow;
+        }
+        
+        function applySort() {
+            const sortSelect = document.getElementById('sortSelect');
+            currentSort = sortSelect.value;
+            const filtered = window.currentStations || allStations;
+            const sorted = sortStations(filtered, currentSort);
+            window.currentStations = sorted;
+            updateMapMarkers(sorted);
+        }
+        
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value;
+            const filtered = searchStations(query);
+            const sorted = sortStations(filtered, currentSort);
+            window.currentStations = sorted;
+            updateMapMarkers(sorted);
+        });
+        
+        // Initialiser la carte au chargement avec vue centrée sur les Alpes
+        window.addEventListener('load', () => {
+            initMap();
+            // Centrer sur les Alpes (où se trouvent la plupart des stations)
+            setTimeout(() => {
+                map.setView([46.2, 7.4], 7); // Centré sur le Valais/Suisse
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chutes de Neige - Stations de Ski | Ski Map</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            color: #666;
+            font-weight: 300;
+        }
+        
+        .station-link {
+            display: inline-block;
+            margin-top: 15px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.85em;
+            opacity: 0.9;
+            padding: 5px 15px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .station-link:hover {
+            background: rgba(255,255,255,0.2);
+            opacity: 1;
+        }
+        
+        .stations-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .station-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .station-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .station-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .station-header h2 {
+            font-size: 1.8em;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .station-header .location {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .snow-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .snow-card.verbier {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .snow-card.val-thorens {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .snow-card::before {
+            content: '❄️';
+            position: absolute;
+            font-size: 150px;
+            opacity: 0.1;
+            top: -30px;
+            right: -30px;
+            transform: rotate(15deg);
+        }
+        
+        .snow-amount {
+            font-size: 3.5em;
+            font-weight: bold;
+            margin: 15px 0;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.2);
+        }
+        
+        .snow-label {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        
+        .time-info {
+            font-size: 1em;
+            opacity: 0.8;
+            margin-top: 20px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .info-card h3 {
+            color: #667eea;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-card .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            margin: 5px 0;
+        }
+        
+        .info-card .unit {
+            font-size: 0.8em;
+            color: #666;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        
+        .status-open {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .stations-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .snow-amount {
+                font-size: 2.5em;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏔️ Stations de Ski</h1>
+            <p class="subtitle">Bulletin Neige - Dernières Chutes de Neige</p>
+        </header>
+        
+        <div class="stations-container">
+            <!-- Tignes -->
+            <div class="station-section">
+                <div class="station-header">
+                    <h2>🏔️ Tignes</h2>
+                    <div class="location">Alpes du Nord, France</div>
+                </div>
+                
+                <div class="snow-card">
+                    <div class="snow-label">Chute de neige dans les 24h</div>
+                    <div class="snow-amount">0 cm</div>
+                    <div class="time-info">Dernière mise à jour : 26 novembre</div>
+                    <span class="status-badge status-open">Station Ouverte</span>
+                    <a href="https://www.skiinfo.fr/alpes-du-nord/tignes/bulletin-neige" target="_blank" class="station-link">Voir sur Skiinfo →</a>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Enneigement en bas</h3>
+                        <div class="value">49<span class="unit">cm</span></div>
+                    </div>
+                    <div class="info-card">
+                        <h3>Enneigement en haut</h3>
+                        <div class="value">140<span class="unit">cm</span></div>
+                    </div>
+                    <div class="info-card">
+                        <h3>Pistes ouvertes</h3>
+                        <div class="value">42<span class="unit">%</span></div>
+                        <div style="margin-top: 5px; color: #666; font-size: 0.75em;">34/81 pistes</div>
+                    </div>
+                    <div class="info-card">
+                        <h3>Remontées ouvertes</h3>
+                        <div class="value">13<span class="unit">/39</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Verbier -->
+            <div class="station-section">
+                <div class="station-header">
+                    <h2>🏔️ Verbier</h2>
+                    <div class="location">Valais, Suisse</div>
+                </div>
+                
+                <div class="snow-card verbier">
+                    <div class="snow-label">Chute de neige dans les 24h</div>
+                    <div class="snow-amount">13 cm</div>
+                    <div class="time-info">Dernière mise à jour : 27 novembre</div>
+                    <span class="status-badge status-open">Station Ouverte</span>
+                    <a href="https://www.skiinfo.fr/valais/verbier/station-de-ski.html" target="_blank" class="station-link">Voir sur Skiinfo →</a>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Enneigement en bas</h3>
+                        <div class="value">0<span class="unit">cm</span></div>
+                    </div>
+                    <div class="info-card">
+                        <h3>Enneigement en haut</h3>
+                        <div class="value">33<span class="unit">cm</span></div>
+                    </div>
+                    <div class="info-card">
+                        <h3>Pistes ouvertes</h3>
+                        <div class="value">0<span class="unit">%</span></div>
+                        <div style="margin-top: 5px; color: #666; font-size: 0.75em;">0/99 pistes</div>
+                    </div>
+                    <div class="info-card">
+                        <h3>Remontées ouvertes</h3>
+                        <div class="value">-<span class="unit">/31</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Val Thorens -->
+            <div class="station-section">
+                <div class="station-header">
+                    <h2>🏔️ Val Thorens</h2>
+                    <div class="location">Alpes du Nord, France</div>
+                </div>
+                
+                <div class="snow-card val-thorens">
+                    <div class="snow-label">Chute de neige dans les 24h</div>
+                    <div class="snow-amount">0 cm</div>
+                    <div class="time-info">Dernière mise à jour : 27 novembre</div>
+                    <span class="status-badge status-open">Station Ouverte</span>
+                    <a href="https://www.skiinfo.fr/alpes-du-nord/val-thorens/bulletin-neige" target="_blank" class="station-link">Voir sur Skiinfo →</a>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Enneigement en bas</h3>
+                        <div class="value">90<span class="unit">cm</span></div>
+                    </div>
+                    <div class="info-card">
+                        <h3>Enneigement en haut</h3>
+                        <div class="value">140<span class="unit">cm</span></div>
+                    </div>
+                    <div class="info-card">
+                        <h3>Pistes ouvertes</h3>
+                        <div class="value">41<span class="unit">%</span></div>
+                        <div style="margin-top: 5px; color: #666; font-size: 0.75em;">37/83 pistes</div>
+                    </div>
+                    <div class="info-card">
+                        <h3>Remontées ouvertes</h3>
+                        <div class="value">20<span class="unit">/31</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Données fournies par les Offices de Tourisme des stations</p>
+            <p>Source : <a href="https://www.skiinfo.fr" target="_blank">Skiinfo.fr</a></p>
+        </div>
+    </div>
+    
+    <script>
+        // Animation au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            const stations = document.querySelectorAll('.station-section');
+            stations.forEach((station, index) => {
+                station.style.opacity = '0';
+                station.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    station.style.transition = 'all 0.5s ease';
+                    station.style.opacity = '1';
+                    station.style.transform = 'translateY(0)';
+                }, index * 150);
+            });
+        });
+    </script>
+</body>
+</html>
+
