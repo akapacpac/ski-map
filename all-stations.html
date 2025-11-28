@@ -56,61 +56,44 @@
         header {
             text-align: center;
             margin-bottom: 0;
-            padding-bottom: 20px;
-            border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+            padding: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
+            background: white;
             z-index: 1000;
-            padding-top: 15px;
-            padding-left: 20px;
-            padding-right: 20px;
-            transform: translateY(0);
-            transition: transform 0.3s ease-in-out;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
             max-width: 100%;
-            height: auto;
-        }
-        
-        header.hidden {
-            transform: translateY(-100%);
         }
         
         @media (min-width: 768px) {
             header {
-                padding-left: 40px;
-                padding-right: 40px;
+                padding: 20px 40px;
             }
         }
         
         h1 {
-            font-size: 3em;
-            font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 12px;
-            letter-spacing: -0.02em;
+            font-size: 2em;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
         }
         
         .subtitle {
-            font-size: 1.15em;
-            color: #64748b;
+            font-size: 0.9em;
+            color: #666;
             font-weight: 400;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         
         .controls {
             display: flex;
             justify-content: center;
             align-items: flex-end;
-            gap: 20px;
+            gap: 15px;
             flex-wrap: wrap;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
         
         .search-box {
@@ -308,23 +291,16 @@
         .stats {
             display: flex;
             justify-content: center;
-            gap: 40px;
-            margin-top: 30px;
+            gap: 30px;
+            margin-top: 15px;
             flex-wrap: wrap;
-            padding: 25px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-            border-radius: 20px;
-            border: 1px solid rgba(102, 126, 234, 0.1);
+            padding: 15px;
         }
         
         .stat-item {
             text-align: center;
-            padding: 15px 25px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            min-width: 120px;
+            padding: 10px 20px;
+            min-width: 100px;
         }
         
         .stat-item:hover {
@@ -1995,32 +1971,7 @@
             }
         });
         
-        // Cacher le header au scroll
-        let lastScrollTop = 0;
-        const header = document.querySelector('header');
-        let scrollTimeout;
-        
-        window.addEventListener('scroll', function() {
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            
-            // Désactiver l'animation au scroll pour améliorer les performances
-            clearTimeout(scrollTimeout);
-            
-            if (scrollTop > 100) {
-                if (scrollTop > lastScrollTop) {
-                    // Scrolling down - hide header
-                    header.classList.add('hidden');
-                } else {
-                    // Scrolling up - show header
-                    header.classList.remove('hidden');
-                }
-            } else {
-                // Near top - always show header
-                header.classList.remove('hidden');
-            }
-            
-            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
-        }, { passive: true });
+        // Pas d'animations, header simple et fixe
     </script>
 </body>
 </html>
